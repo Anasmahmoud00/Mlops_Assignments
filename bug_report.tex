@@ -1,0 +1,29 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{tabularx}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{xcolor}
+\usepackage{colortbl}
+
+\begin{document}
+
+\section*{YAML File Bugs and Solutions}
+
+\renewcommand{\arraystretch}{1.5}
+\noindent
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3cm}|X|}
+\hline
+\rowcolor{gray!20}
+\textbf{Bug / Error} & \textbf{Details} \\
+\hline
+\textbf{Invalid Indentation} (Sibling Keys) & \textbf{Explanation:} \begin{itemize} \item Properties belonging to the same list item must have the exact same indentation level. \item You indented \texttt{uses:}, \texttt{with:}, and \texttt{run:} further to the right than \texttt{name:}. \item Because \texttt{name:} already has a value, YAML gets confused and expects them to be on the same vertical line. \end{itemize} \textbf{Fix:} \begin{itemize} \item Un-indent \texttt{uses:}, \texttt{with:}, and \texttt{run:}. \item Align their first letter vertically with the \texttt{n} in \texttt{name:}. \end{itemize} \\
+\hline
+\textbf{Invalid Indentation} (Nested Keys) & \textbf{Explanation:} \begin{itemize} \item Because \texttt{with:} was pushed too far to the right, \texttt{python-version:} was also pushed further. \item It must be strictly indented \textit{under} \texttt{with:} to show it belongs to it. \end{itemize} \textbf{Fix:} \begin{itemize} \item Align \texttt{python-version:} exactly 2 spaces to the right of the \texttt{w} in \texttt{with:}. \end{itemize} \\
+\hline
+\textbf{Missing Action or Command} & \textbf{Explanation:} \begin{itemize} \item While this is valid YAML syntax, it is an \textbf{invalid GitHub Actions workflow}. \item Every step in GitHub Actions requires either a \texttt{uses:} or a \texttt{run:}. \item This step has neither. \end{itemize} \textbf{Fix:} \begin{itemize} \item Add a new line below \texttt{- name: Linter Check} with correct indentation. \item Write an execution command like \texttt{run: flake8 .} or \texttt{run: pylint ml\_opsa1\_sa.py}. \end{itemize} \\
+\hline
+\textbf{Multi-line String Indentation Error} & \textbf{Explanation:} \begin{itemize} \item The pipe operator \texttt{|} indicates a multi-line string block. \item Text inside the block \textbf{MUST} be indented further to the right than the key (\texttt{run:}). \item Currently, it is aligned exactly with \texttt{run:}, which will break the file. \end{itemize} \textbf{Fix:} \begin{itemize} \item Indent line 27 (\texttt{python -c ...}) at least 2 spaces to the right of the \texttt{r} in \texttt{run:}. \end{itemize} \\
+\hline
+\end{tabularx}
+
+\end{document}
