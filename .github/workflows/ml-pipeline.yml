@@ -1,14 +1,16 @@
-name: ML Model CI
+name: ML Model CI/CD Pipeline
 
 on:
   push:
-    branches: main
+    branches:
+      - main
   pull_request:
 
 jobs:
-  validate-and-test:
+  validate:
+    name: Model Validation (CI)
     runs-on: ubuntu-latest
-    steps:                
+    steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
@@ -18,11 +20,53 @@ jobs:
           python-version: '3.10'
 
       - name: Install Dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt dvc
 
-      - name: Linter Check
-        run: echo "Linter check passed successfully!"
-
-      - name: Model Dry Test
+      - name: DVC Pull Data
         run: |
-          python -c "import torch; print('Model environment ready!')"
+        
+          dvc pull || echo "DVC pull skipped (missing config or data)"
+
+      - name: Train Model
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: python train.py
+
+      - name: Save Model Info
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-info
+          path: model_info.txt
+
+  deploy:
+    name: Model Deployment (CD)
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: pip install mlflow
+
+      - name: Download Model Info
+        uses: actions/download-artifact@v4
+        with:
+          name: model-info
+
+      - name: Check Accuracy Threshold
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: python check_threshold.py
+
+      - name: Mock Docker Build
+        run: |
+          RUN_ID=$(cat model_info.txt)
+          echo "Building Docker image for Run ID: $RUN_ID"
+          # Simulated build
+          docker build --build-arg RUN_ID=$RUN_ID -t ${{ secrets.DOCKER_USERNAME }}/ml-app:latest .

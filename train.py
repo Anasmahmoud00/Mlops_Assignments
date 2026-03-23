@@ -73,7 +73,7 @@ for lr in learning_rates:
                 loss_g = loss_fn(D(G(z)), torch.ones(b, 1))
                 opt_G.zero_grad(); loss_g.backward(); opt_G.step()
 
-            # ── End of Epoch Logging ──
+        # ── End of Epoch Logging ──
             g_loss_history.append(loss_g.item())
             d_loss_history.append(loss_d.item())
 
@@ -94,6 +94,11 @@ for lr in learning_rates:
         mlflow.pytorch.log_model(G, "generator_model")
         mlflow.pytorch.log_model(D, "discriminator_model")
         
+        # Capture the current Run ID for the Validation Task
+        run_id = mlflow.active_run().info.run_id
+        with open("model_info.txt", "w") as f:
+            f.write(run_id)
+
         # Plot generated digits
         G.eval()
         with torch.no_grad():
