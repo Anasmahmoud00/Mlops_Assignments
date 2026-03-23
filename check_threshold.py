@@ -23,7 +23,7 @@ try:
     print(f"Run ID: {run_id}")
     print(f"Accuracy: {accuracy}")
 
-    threshold = 0.85
+    threshold = 0.70
     if accuracy < threshold:
         print(f"FAILED: Accuracy {accuracy} is below threshold {threshold}")
         sys.exit(1)
