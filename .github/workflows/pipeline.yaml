@@ -1,0 +1,84 @@
+name: Model Training Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  linter:
+    name: Code Quality Check (Linter)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Linting Tools
+        run: pip install flake8
+
+      - name: Run Linter
+        run: |
+          # Basic linting to ensure code integrity
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          echo "Linter passed successfully!"
+
+  train:
+    name: Heavy GPU Training
+    runs-on: ubuntu-latest # In a real scenario, this would be a GPU runner
+    needs: linter
+    # Gatekeeper logic: 
+    # 1. Dependency: needs linter (already handled)
+    # 2. Branch Protection: Only on main branch
+    # 3. Manual Intent: Commit message must contain [run-train]
+    if: |
+      github.ref == 'refs/heads/main' && 
+      contains(github.event.head_commit.message, '[run-train]')
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: pip install -r requirements.txt dvc mlflow
+
+      - name: DVC Pull Data
+        run: dvc pull || echo "DVC pull skipped"
+
+      - name: Train Model
+        id: train_step
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: python train.py
+
+      - name: Generate Error Logs on Failure
+        if: failure()
+        run: |
+          echo "Training failed at $(date)" > error_logs.txt
+          echo "Please check the 'train' job logs for detailed stack trace." >> error_logs.txt
+          echo "Commit: ${{ github.sha }}" >> error_logs.txt
+          # Log some environment info or tail of the log if possible
+          echo "Environment: ubuntu-latest" >> error_logs.txt
+
+      - name: Upload Error Logs Artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-logs
+          path: error_logs.txt
+
+      - name: Final Cleanup
+        if: always()
+        run: echo "Cleaning up temporary cloud volumes..."
