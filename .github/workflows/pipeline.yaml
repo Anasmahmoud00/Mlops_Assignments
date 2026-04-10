@@ -39,8 +39,10 @@ jobs:
     # 2. Branch Protection: Only on main branch
     # 3. Manual Intent: Commit message must contain [run-train]
     if: |
+      success() &&
       github.ref == 'refs/heads/main' && 
       contains(github.event.head_commit.message, '[run-train]')
+
     
     steps:
       - name: Checkout Code
